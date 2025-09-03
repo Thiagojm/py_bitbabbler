@@ -59,9 +59,13 @@ class BitBabbler(FTDIDevice):
 
     @staticmethod
     def open(serial: Optional[str] = None) -> "BitBabbler":
+        # First try the canonical VID/PID
         base = FTDIDevice.find(BB_VENDOR_ID, BB_PRODUCT_ID, serial=serial)
         if base is None:
-            raise RuntimeError("BitBabbler device not found (vendor 0x0403, product 0x7840)")
+            # Fallback: scan all USB devices for BitBabbler strings
+            base = FTDIDevice.find_any_bitbabbler(serial=serial)
+        if base is None:
+            raise RuntimeError("BitBabbler device not found (tried VID:PID 0403:7840 and string scan)")
         bb = BitBabbler(base)
         if not bb.init():
             raise RuntimeError("Failed to initialize BitBabbler (MPSSE sync)")

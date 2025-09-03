@@ -46,6 +46,7 @@ def main() -> int:
 
         # Print as N-bit binary number (zero-padded)
         n = int.from_bytes(data, byteorder="big", signed=False)
+        print("int:", n)
         print("bin:", format(n, f"0{bits}b"))
         return 0
     except Exception as e:

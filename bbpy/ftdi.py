@@ -163,6 +163,86 @@ class FTDIDevice:
 
         return FTDIDevice(dev, in_ep, out_ep, wMaxPacketSize)
 
+    @staticmethod
+    def find_any_bitbabbler(serial: Optional[str] = None) -> Optional["FTDIDevice"]:
+        """Find any connected BitBabbler by scanning USB strings.
+
+        This scans all USB devices and selects the first whose manufacturer or
+        product string contains "bitbabbler" (case-insensitive). If a serial is
+        provided, it must match exactly.
+        """
+        # Pass backend explicitly if we have one
+        find_kwargs = {}
+        if _backend is not None:
+            find_kwargs["backend"] = _backend
+
+        try:
+            for dev in usb.core.find(find_all=True, **find_kwargs):
+                try:
+                    manufacturer = usb.util.get_string(dev, dev.iManufacturer) if dev.iManufacturer else ""
+                    product = usb.util.get_string(dev, dev.iProduct) if dev.iProduct else ""
+                except Exception:
+                    manufacturer = ""
+                    product = ""
+
+                text = f"{manufacturer} {product}".lower()
+                if "bitbabbler" not in text:
+                    continue
+
+                if serial is not None:
+                    try:
+                        dev_serial = usb.util.get_string(dev, dev.iSerialNumber) if dev.iSerialNumber else None
+                    except Exception:
+                        dev_serial = None
+                    if dev_serial != serial:
+                        continue
+
+                # Ensure configured
+                try:
+                    if dev.get_active_configuration() is None:
+                        dev.set_configuration()
+                except Exception:
+                    # Some backends raise if already configured; ignore
+                    pass
+
+                cfg = dev.get_active_configuration()
+                intf = usb.util.find_descriptor(cfg, bInterfaceNumber=0, bAlternateSetting=0)
+                if intf is None:
+                    # fallback: first interface
+                    intf = cfg[(0, 0)]
+
+                # Claim interface when needed; ignore errors on Windows
+                try:
+                    if usb.util.device_has_kernel_driver(dev, intf.bInterfaceNumber):
+                        try:
+                            dev.detach_kernel_driver(intf.bInterfaceNumber)
+                        except Exception:
+                            pass
+                    usb.util.claim_interface(dev, intf.bInterfaceNumber)
+                except Exception:
+                    pass
+
+                # Endpoints: choose bulk IN and bulk OUT
+                in_ep = None
+                out_ep = None
+                wMaxPacketSize = 64
+                for ep in intf.endpoints():
+                    addr = ep.bEndpointAddress
+                    if addr & 0x80:
+                        in_ep = addr
+                        wMaxPacketSize = ep.wMaxPacketSize
+                    else:
+                        out_ep = addr
+                if in_ep is None or out_ep is None:
+                    # Not suitable
+                    continue
+
+                return FTDIDevice(dev, in_ep, out_ep, wMaxPacketSize)
+        except Exception:
+            pass
+
+        return None
+
     # ---------- FTDI control helpers ----------
     def _ctrl_out(self, request: int, value: int, index: int) -> None:
         self.dev.ctrl_transfer(0x40, request, value, index, None, self.timeout_ms)
