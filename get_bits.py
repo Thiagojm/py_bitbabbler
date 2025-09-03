@@ -1,3 +1,14 @@
+"""Read a configurable number of bits from a BitBabbler device.
+
+This script opens the first available BitBabbler (auto-detected by the bbpy
+module) and prints the random value as:
+- hex
+- int (decimal)
+- bin (zero-padded to the requested bit length)
+
+Use --bits/-b to choose the bit length (must be a multiple of 8) and
+--folds/-f to apply XOR folding before output.
+"""
 import sys
 import argparse
 
@@ -5,6 +16,7 @@ from bbpy.bitbabbler import BitBabbler
 
 
 def parse_args() -> argparse.Namespace:
+    """Build and parse CLI arguments for bit length and folds."""
     parser = argparse.ArgumentParser(
         description="Read entropy from BitBabbler and print as hex and binary."
     )
@@ -26,6 +38,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Entry point for the get_bits script.
+
+    Returns 0 on success, 1 on error.
+    """
     try:
         args = parse_args()
         bits = args.bits

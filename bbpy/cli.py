@@ -1,3 +1,8 @@
+"""Command-line interface for BitBabbler Python tools.
+
+Provides a `read` subcommand to fetch random bytes from a BitBabbler device,
+optionally applying XOR folding and printing as hex or writing to a file.
+"""
 import argparse
 import binascii
 import sys
@@ -7,6 +12,12 @@ from .bitbabbler import BitBabbler
 
 
 def cmd_read(args: argparse.Namespace) -> int:
+    """Handle the `read` subcommand.
+
+    Opens a BitBabbler (optionally by serial), applies bitrate/latency if
+    provided, reads the requested byte count (after folding), and prints or
+    writes the result.
+    """
     try:
         bb = BitBabbler.open(serial=args.serial)
         if args.bitrate or args.latency:
@@ -32,6 +43,7 @@ def cmd_read(args: argparse.Namespace) -> int:
 
 
 def build_argparser() -> argparse.ArgumentParser:
+    """Create the top-level argument parser for the `bbpy` CLI."""
     p = argparse.ArgumentParser(prog="bbpy", description="BitBabbler Python CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -49,6 +61,7 @@ def build_argparser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[list] = None) -> int:
+    """CLI entry point for `python -m bbpy`. Returns process exit code."""
     parser = build_argparser()
     args = parser.parse_args(argv)
     return args.func(args)

@@ -7,6 +7,7 @@ Python utilities for reading true random data from BitBabbler USB devices (FTDI-
 - Reads raw entropy bytes efficiently with chunking
 - Optional XOR folding (same as C++ `FoldBytes`) to post-process data
 - Simple CLI and importable Python API
+- Auto-detects BitBabbler devices by VID:PID and by USB descriptor strings
 
 ## Requirements
 - Python (tested with 3.8+)
@@ -84,6 +85,25 @@ python get_bits.py -b 1024 -f 2
 Notes:
 - `--bits/-b` must be a positive multiple of 8 (e.g., 256, 1024, 2048).
 - `--folds/-f` must be a non-negative integer.
+
+## Randomness tests
+
+`randomness_tests.py` runs quick statistical checks (Shannon entropy, serial correlation, monobit, runs, and byte chi-square) on data from the device or a file.
+
+Examples:
+```bash
+# From device: 1 MiB sample, no folding
+python randomness_tests.py --bytes 1048576
+
+# From device with folding
+python randomness_tests.py --bytes 1048576 --fold 2
+
+# From file (raw bytes)
+python randomness_tests.py --file rng.bin
+
+# From file (hex-encoded text)
+python randomness_tests.py --file rng.hex --hex
+```
 
 ## Folding
 
